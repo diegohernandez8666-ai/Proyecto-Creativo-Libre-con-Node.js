@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>StressLess</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    font-family: Arial;
+    background-color: #f4f6f9;
+    padding: 40px;
+}
+
+input, button {
+    padding: 8px;
+    margin: 5px;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+</style>
+</head>
+
+<body>
+
+<h1>StressLess - Calculadora de Estres Academico</h1>
+
+<div class="card">
+<h2>Agregar Tarea</h2>
+
+<input type="text" id="titulo" placeholder="Titulo">
+<input type="number" id="dificultad" placeholder="Dificultad (1-5)">
+<input type="number" id="dias" placeholder="Dias restantes">
+<button onclick="agregarTarea()">Agregar</button>
+</div>
+
+<div class="card">
+<h2>Tareas</h2>
+<ul id="listaTareas"></ul>
+</div>
+
+<div class="card">
+<h2>Nivel de Estres</h2>
+<button onclick="calcularEstres()">Calcular</button>
+<p id="resultado"></p>
+<canvas id="grafica"></canvas>
+</div>
+
+<script>
+let chart;
+
+async function agregarTarea() {
+    const titulo = document.getElementById("titulo").value;
+    const dificultad = parseInt(document.getElementById("dificultad").value);
+    const diasRestantes = parseInt(document.getElementById("dias").value);
+
+    await fetch("/tareas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titulo, dificultad, diasRestantes })
+    });
+
+    cargarTareas();
+}
+
+async function cargarTareas() {
+    const res = await fetch("/tareas");
+    const tareas = await res.json();
+
+    const lista = document.getElementById("listaTareas");
+    lista.innerHTML = "";
+
+    tareas.forEach(t => {
+        const li = document.createElement("li");
+        li.innerHTML = t.titulo +
+            " - Dificultad: " + t.dificultad +
+            " - Dias: " + t.diasRestantes +
+            " <button onclick='eliminarTarea(" + t.id + ")'>Eliminar</button>";
+        lista.appendChild(li);
+    });
+}
+
+async function eliminarTarea(id) {
+    await fetch("/tareas/" + id, { method: "DELETE" });
+    cargarTareas();
+}
+
+async function calcularEstres() {
+    const res = await fetch("/estres");
+    const data = await res.json();
+
+    document.getElementById("resultado").textContent =
+        "Indice: " + data.indice + " | Nivel: " + data.nivel;
+
+    mostrarGrafica(data.indice);
+}
+
+function mostrarGrafica(valor) {
+    const ctx = document.getElementById("grafica");
+
+    if (chart) {
+        chart.destroy();
+    }
+
+    chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: ["Indice de Estres"],
+            datasets: [{
+                label: "Valor",
+                data: [valor]
+            }]
+        }
+    });
+}
+
+cargarTareas();
+</script>
+
+</body>
+</html>
